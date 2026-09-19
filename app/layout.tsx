@@ -6,8 +6,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata = {
-  title: "T4SG Biodiversity Hub",
-  description: "T4SG Deliverable for Fall 2026 Applications.",
+  title: "Biodiversity Hub",
+  description: "A shared field guide for exploring and documenting species.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,19 +16,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       {/* Hydration warning suppressed because of next-themes https://github.com/pacocoursey/next-themes */}
       <body>
         <Providers>
-          <div className="flex-col md:flex">
-            <div className="border-b">
-              <div className="flex h-16 items-center px-4">
-                <Navbar className="mx-6" />
-                <div className="ml-auto flex items-center space-x-4">
+          <div className="min-h-screen">
+            <a
+              href="#main-content"
+              className="sr-only z-50 rounded-lg bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:absolute focus:left-4 focus:top-4"
+            >
+              Skip to content
+            </a>
+            <header className="border-b border-border/70 bg-background/90 backdrop-blur-xl">
+              <div className="mx-auto flex min-h-20 max-w-7xl items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
+                <Navbar />
+                <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
                   <ModeToggle />
                   <AuthStatus />
                 </div>
               </div>
-            </div>
-            {/* Conditionally display website if logged in, else display login page */}
-            <div className="space-y-6 p-10 pb-16 md:block">
-              <main>{children}</main>
+            </header>
+            <div className="px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+              <main id="main-content" tabIndex={-1}>
+                {children}
+              </main>
             </div>
           </div>
         </Providers>

@@ -1,33 +1,35 @@
 "use client";
-/*
-Note: "use client" is a Next.js App Router directive that tells React to render the component as
-a client component rather than a server component. This establishes the server-client boundary,
-providing access to client-side functionality such as hooks and event handlers to this component and
-any of its imported children. Although the SpeciesCard component itself does not use any client-side
-functionality, it is beneficial to move it to the client because it is rendered in a list with a unique
-key prop in species/page.tsx. When multiple component instances are rendered from a list, React uses the unique key prop
-on the client-side to correctly match component state and props should the order of the list ever change.
-React server components don't track state between rerenders, so leaving the uniquely identified components (e.g. SpeciesCard)
-can cause errors with matching props and state in child components if the list order changes.
-*/
-import { Button } from "@/components/ui/button";
-import type { Database } from "@/lib/schema";
-import Image from "next/image";
-type Species = Database["public"]["Tables"]["species"]["Row"];
+import SpeciesImage from "@/components/species-image";
+import { Leaf } from "lucide-react";
+import EditSpeciesDialog from "./edit-species-dialog";
+import SpeciesDetailsDialog from "./species-details-dialog";
+import type { Species } from "./species-types";
 
-export default function SpeciesCard({ species }: { species: Species }) {
+export default function SpeciesCard({ species, sessionId }: { species: Species; sessionId: string }) {
+  const commonName = species.common_name?.trim();
+  const displayName = commonName && commonName.length > 0 ? commonName : species.scientific_name;
+  const description = species.description?.split("\n\nSource:")[0]?.trim();
+
   return (
-    <div className="m-4 w-72 min-w-72 flex-none rounded border-2 p-3 shadow">
-      {species.image && (
-        <div className="relative h-40 w-full">
-          <Image src={species.image} alt={species.scientific_name} fill style={{ objectFit: "cover" }} />
+    <article className="field-panel group flex min-w-0 flex-col overflow-hidden transition-shadow hover:shadow-lg">
+      <div className="relative aspect-[16/11] w-full overflow-hidden bg-muted">
+        <SpeciesImage src={species.image} name={displayName} />
+        <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-background/95 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-foreground shadow-sm backdrop-blur">
+          <Leaf className="h-3 w-3 text-primary" aria-hidden="true" />
+          {species.kingdom}
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
+        <h3 className="field-title break-words text-2xl leading-tight">{displayName}</h3>
+        <p className="mt-1 break-words text-sm italic text-muted-foreground">{species.scientific_name}</p>
+        <p className="mt-3 line-clamp-3 break-words text-sm leading-6 text-muted-foreground">
+          {description && description.length > 0 ? description : "No description has been added yet."}
+        </p>
+        <div className={`mt-auto grid gap-2 pt-6 ${sessionId === species.author ? "grid-cols-2" : "grid-cols-1"}`}>
+          <SpeciesDetailsDialog species={species} />
+          {sessionId === species.author && <EditSpeciesDialog species={species} userId={sessionId} />}
         </div>
-      )}
-      <h3 className="mt-3 text-2xl font-semibold">{species.scientific_name}</h3>
-      <h4 className="text-lg font-light italic">{species.common_name}</h4>
-      <p>{species.description ? species.description.slice(0, 150).trim() + "..." : ""}</p>
-      {/* Replace the button with the detailed view dialog. */}
-      <Button className="mt-3 w-full">Learn More</Button>
-    </div>
+      </div>
+    </article>
   );
 }

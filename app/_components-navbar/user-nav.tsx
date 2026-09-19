@@ -11,11 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/components/ui/use-toast";
 import { createBrowserSupabaseClient } from "@/lib/client-utils";
 import { type Database } from "@/lib/schema";
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -24,9 +26,22 @@ export default function UserNav({ profile }: { profile: Profile }) {
   const supabaseClient = createBrowserSupabaseClient();
 
   const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
-    await supabaseClient.auth.signOut();
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      setIsSigningOut(false);
+      return toast({
+        title: "Unable to log out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+
+    router.replace("/");
     router.refresh();
   };
 
@@ -66,12 +81,13 @@ export default function UserNav({ profile }: { profile: Profile }) {
         <DropdownMenuSeparator />
         {/* Mark promise as purposefully dangling for clarity: https://github.com/typescript-eslint/typescript-eslint/issues/4619 */}
         <DropdownMenuItem
+          disabled={isSigningOut}
           onClick={() => {
             void handleSignOut();
           }}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>{isSigningOut ? "Logging out…" : "Log out"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

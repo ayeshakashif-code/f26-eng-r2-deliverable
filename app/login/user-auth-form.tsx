@@ -22,7 +22,11 @@ const userAuthSchema = z.object({
 // Use Zod to extract inferred type from schema
 type FormData = z.infer<typeof userAuthSchema>;
 
-export default function UserAuthForm({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
+  nextPath: string;
+}
+
+export default function UserAuthForm({ nextPath, className, ...props }: UserAuthFormProps) {
   // Create form with react-hook-form and use Zod schema to validate the form submission (with resolver)
   const {
     register,
@@ -33,31 +37,38 @@ export default function UserAuthForm({ className, ...props }: React.HTMLAttribut
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   // Obtain supabase client from context provider
   const supabaseClient = createBrowserSupabaseClient();
 
   const onSubmit = async (input: FormData) => {
     setIsLoading(true);
+    const callbackUrl = new URL("/auth/callback", location.origin);
+    callbackUrl.searchParams.set("next", nextPath);
 
     // Supabase magic link sign-in
     const { error } = await supabaseClient.auth.signInWithOtp({
       email: input.email.toLowerCase(),
       options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl.toString(),
       },
     });
 
     setIsLoading(false);
 
     if (error) {
+      const isEmailRateLimited = error.status === 429 || error.message.toLowerCase().includes("email rate limit");
       return toast({
-        title: "Something went wrong.",
-        description: error.message,
+        title: isEmailRateLimited ? "Email limit reached" : "Unable to send sign-in link",
+        description: isEmailRateLimited
+          ? "Supabase's temporary email quota is full. Wait for it to reset or configure custom SMTP before trying again."
+          : error.message,
         variant: "destructive",
       });
     }
 
+    setEmailSent(true);
     return toast({
       title: "Check your email",
       description: "We sent you a login link. Be sure to check your spam too.",
@@ -67,11 +78,9 @@ export default function UserAuthForm({ className, ...props }: React.HTMLAttribut
   return (
     <div className={cn("grid gap-6", className)} {...props}>
       <form onSubmit={(e: BaseSyntheticEvent) => void handleSubmit(onSubmit)(e)}>
-        <div className="grid gap-2">
-          <div className="grid gap-1">
-            <Label className="sr-only" htmlFor="email">
-              Email
-            </Label>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email address</Label>
             <Input
               id="email"
               placeholder="name@example.com"
@@ -80,14 +89,20 @@ export default function UserAuthForm({ className, ...props }: React.HTMLAttribut
               autoComplete="email"
               autoCorrect="off"
               disabled={isLoading}
+              className="h-12"
               {...register("email")}
             />
             {errors?.email && <p className="px-1 text-xs text-red-600">{errors.email.message}</p>}
           </div>
-          <Button disabled={isLoading}>
+          <Button className="h-12" disabled={isLoading || emailSent}>
             {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
-            Sign In with Email
+            {emailSent ? "Sign-in link sent" : "Sign in with email"}
           </Button>
+          {emailSent && (
+            <p className="text-center text-xs text-muted-foreground" role="status">
+              Use the newest email link in this browser. Sending another link can invalidate the first one.
+            </p>
+          )}
         </div>
       </form>
     </div>

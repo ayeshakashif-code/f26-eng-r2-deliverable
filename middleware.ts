@@ -2,11 +2,25 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const pendingCookies = new Map<string, { value: string; options: CookieOptions }>();
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
+
+  const rebuildResponse = () => {
+    response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+    pendingCookies.forEach(({ value, options }, name) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      response.cookies.set({ name, value, ...options });
+    });
+    response.headers.set("Cache-Control", "private, no-store");
+  };
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,11 +37,8 @@ export async function middleware(request: NextRequest) {
             value,
             ...options,
           });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
+          pendingCookies.set(name, { value, options });
+          rebuildResponse();
         },
         remove(name: string, options: CookieOptions) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -36,11 +47,8 @@ export async function middleware(request: NextRequest) {
             value: "",
             ...options,
           });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
+          pendingCookies.set(name, { value: "", options });
+          rebuildResponse();
         },
       },
     },
