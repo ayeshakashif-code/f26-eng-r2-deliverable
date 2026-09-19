@@ -130,6 +130,16 @@
 
 ## Authentication and release (later phase)
 
+### Deployment progress — September 18, 2026
+
+- User authorized committing, pushing, and deploying. App implementation and Vercel upload exclusions are pushed to `origin/main` (implementation `428e900`, upload safeguards `9c45253`).
+- Production deployment is ready at https://f26-eng-r2-deliverable-two.vercel.app in Vercel project `a-dea2/f26-eng-r2-deliverable`; the GitHub repository is connected. The cloud production build, including lint/type checks, passed.
+- Configured `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `OPENAI_API_KEY`, and `OPENAI_MODEL` for production and preview. The OpenAI key is stored as a Vercel secret. No values were logged. `.env`, Vercel's generated `.env.local`, and `.vercel` remain gitignored, and `.vercelignore` explicitly excludes environment files from source uploads.
+- Live checks: homepage and login return 200; `/species` contains the protected login redirect; an invalid callback returns 307 to the same production login; unauthenticated `POST /api/chat` returns 401 without a provider call. Real production sign-in, session persistence, and signed-in feature checks are still pending.
+- Next dashboard action: Supabase Authentication → URL Configuration. Set Site URL to `https://f26-eng-r2-deliverable-two.vercel.app` and add `https://f26-eng-r2-deliverable-two.vercel.app/auth/callback` to Redirect URLs; retain the localhost callback for development. This dashboard change has not been performed by the agent.
+- Deployment does not clear the remaining release tasks: correct and test SMTP credentials/email delivery, verify production login and refresh persistence, add effective deployment-wide chatbot rate limiting, address dependency security findings, complete the assignment's domain-approval step, and verify submission requirements. No additional paid AI calls were made.
+- Rechecked production audit immediately before deploying: 13 findings remain (1 critical, 6 high, 4 moderate, 2 low), including Next.js. Vercel accepted this build; acceptance does not mean the findings are resolved. No forced dependency upgrades or vulnerability-check bypasses were used.
+
 - Assignment constraint verified: README “Run the webapp and log in,” step 2 explicitly requires email magic-link authentication and says to open the link in the same browser. Per the agreed decision rule, magic links are preserved; email/password signup, password login, and password recovery were not substituted for the required flow.
 - Successful authentication returns to a validated same-origin `next` path, defaulting to `/species`. Explore species targets `/species`, and protected pages send unauthenticated visitors to login with an internal return path. Absolute, protocol-relative, and backslash-based external return paths are rejected.
 - Fixed session refresh persistence: middleware now returns every refreshed Supabase cookie chunk to the browser, keeps Server Components on the same refreshed request cookies, and marks refresh responses private/no-store. Protected pages now verify the user with `getUser()` rather than trusting `getSession()`.
